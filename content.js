@@ -68,21 +68,47 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // 🟢 Observe Inline CSS Changes
 const inlineObserver = new MutationObserver((mutations) => {
+    console.log('MutationObserver');
+    const changes = [];
+
     mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-            console.log('✅ Inline CSS changed:', mutation.target);
-            chrome.runtime.sendMessage({
-                type: 'INLINE_CSS_CHANGE',
-                element: mutation.target.outerHTML
+            console.log('✅ Inline CSS changed:', mutation);
+
+            const oldStyle = mutation.oldValue;
+            const newStyle = mutation.target.getAttribute('style');
+            if (newStyle === oldStyle) return;
+
+            let tag = mutation.target.tagName.toLowerCase()
+            let selector = tag;
+            if (mutation.target.id) {
+                selector += '#' + mutation.target.id;
+            }
+            if (mutation.target.className) {
+                selector += '.' + mutation.target.className;
+            }
+            
+            let newStyleString = selector + ' {' + newStyle + '}';
+            changes.push({
+                type: 'rule-modified',
+                sheet: 'element style change on element : ' + selector,
+                oldRule: oldStyle,
+                newRule: newStyleString,
             });
         }
     });
+
+    if (changes.length > 0) {
+        console.log("sennding message");
+        chrome.runtime.sendMessage({ type: 'ELEMENT_STYLE_CHANGES', changes });
+    }
 });
 
 inlineObserver.observe(document.body, {
     attributes: true,
     subtree: true,
-    attributeFilter: ['style']
+    attributeFilter: ['style'],
+    attributeOldValue: true
 });
 
 // Start initial state

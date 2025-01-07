@@ -1,32 +1,43 @@
 document.addEventListener("DOMContentLoaded", () => {
     const cssList = document.getElementById("css-list");
 
-    // 🟢 Fetch and Display CSS Changes
-    chrome.storage.local.get(["cssChanges", "inlineCSSChange"], (data) => {
-        const { cssChanges, inlineCSSChange } = data;
+displayChanges();
+    function displayChanges() {
+        // 🟢 Fetch and Display CSS Changes
+        chrome.storage.local.get(["elementCssChanges", "inlineCSSChange"], (data) => {
+            const { elementCssChanges, inlineCSSChange } = data;
 
-        if (cssChanges) {
-            cssChanges.forEach(change => {
+            if (elementCssChanges) {
+                elementCssChanges.forEach(change => {
+                    const li = document.createElement("li");
+                    li.textContent = `Change in: ${change.sheet}, Type: ${change.type}`;
+                    cssList.appendChild(li);
+                });
+            }
+
+            if (inlineCSSChange) {
                 const li = document.createElement("li");
-                li.textContent = `Change in: ${change.sheet}, Type: ${change.type}`;
+                li.textContent = `Inline CSS Change: ${inlineCSSChange}`;
                 cssList.appendChild(li);
-            });
-        }
-
-        if (inlineCSSChange) {
-            const li = document.createElement("li");
-            li.textContent = `Inline CSS Change: ${inlineCSSChange}`;
-            cssList.appendChild(li);
-        }
-    });
-
+            }
+        });
+    }
     // 🟢 Save Changes to File
     document.getElementById("save-changes").addEventListener("click", async () => {
         try {
-            const data = await chrome.storage.local.get("cssChanges");
-            const changes = data.cssChanges || [];
+            const data = await chrome.storage.local.get(["elementCssChanges", "inlineCSSChange"]);
+            console.log('Data:', data);
+            const elementCssChanges = data.elementCssChanges || [];
+            const inlineCSSChange = data.inlineCSSChange ? [{
+                type: 'rule-modified',
+                sheet: 'inline stylesheet',
+                oldRule: '', // Assuming oldRule is not available for inline changes
+                newRule: data.inlineCSSChange
+            }] : [];
 
-            if (changes.length === 0) {
+            const changes = [...elementCssChanges, ...inlineCSSChange];
+
+            if (elementCssChanges.length === 0 && inlineCSSChange.length === 0) {
                 alert("No changes to save.");
                 return;
             }
@@ -38,11 +49,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     accept: { "text/css": [".css"] }
                 }]
             });
-
+            console.log(elementCssChanges);
             const writable = await handle.createWritable();
-            const content = changes.map(c => `/* ${c.type} in ${c.sheet} */\n${c.newRule || ''}`).join("\n");
+            const content1 = elementCssChanges.map(c => `/* ${c.type} in ${c.sheet}*/\n${c.newRule || ''}`).join("\n");
 
-            await writable.write(content);
+            await writable.write(content1);
+
+            // const content2 = inlineCSSChange.map(c => `/* ${c.type} in ${c.sheet} */\n${c.newRule || ''}`).join("\n");
+
             await writable.close();
 
             alert("Changes saved successfully!");
@@ -50,7 +64,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error('Failed to save changes:', err);
         }
     });
-
 
     document.getElementById("detect-changes-btn").addEventListener('click', () => {
         // Send a message to the content script
@@ -63,5 +76,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         });
+        displayChanges();
     });
 });
