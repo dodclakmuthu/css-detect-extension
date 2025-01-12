@@ -18,10 +18,7 @@ function captureCSSState() {
 
 // 🟢 Detect changes between previous and current CSS state
 function detectExternalCSSChanges() {
-    console.log('Checking for CSS changes...');
     const currentCSSState = captureCSSState();
-    console.log('Current CSS State:', currentCSSState);
-    console.log('Previous CSS State:', previousCSSState);
     if (previousCSSState.length === 0) {
         previousCSSState = currentCSSState;
         return;
@@ -51,9 +48,8 @@ function detectExternalCSSChanges() {
             });
         }
     });
-
     if (changes.length > 0) {
-        chrome.runtime.sendMessage({ type: 'CSS_CHANGE', changes });
+        chrome.runtime.sendMessage({ type: 'STYLESHEET_CSS_CHANGES', changes });
     }
 
     previousCSSState = currentCSSState;
@@ -68,12 +64,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // 🟢 Observe Inline CSS Changes
 const inlineObserver = new MutationObserver((mutations) => {
-    console.log('MutationObserver');
     const changes = [];
 
     mutations.forEach((mutation) => {
         if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
-            console.log('✅ Inline CSS changed:', mutation);
 
             const oldStyle = mutation.oldValue;
             const newStyle = mutation.target.getAttribute('style');
@@ -99,7 +93,6 @@ const inlineObserver = new MutationObserver((mutations) => {
     });
 
     if (changes.length > 0) {
-        console.log("sennding message");
         chrome.runtime.sendMessage({ type: 'ELEMENT_STYLE_CHANGES', changes });
     }
 });
@@ -113,4 +106,3 @@ inlineObserver.observe(document.body, {
 
 // Start initial state
 previousCSSState = captureCSSState();
-console.log('✅ CSS observers initialized.');

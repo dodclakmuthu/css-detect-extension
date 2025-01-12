@@ -5,8 +5,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.storage.local.set({ elementCssChanges: message.changes });
     }
 
-    if (message.type === 'INLINE_CSS_CHANGE') {
-        console.log('🔄 Inline CSS Change Detected:', message.element);
-        chrome.storage.local.set({ inlineCSSChange: message.element });
+    if (message.type === 'STYLESHEET_CSS_CHANGES') {
+        console.log('🔄 Inline CSS Change Detected:', message.changes);
+        chrome.storage.local.set({ styleSheetChanges: message.changes });
     }
 });
