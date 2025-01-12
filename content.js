@@ -18,41 +18,45 @@ function captureCSSState() {
 
 // 🟢 Detect changes between previous and current CSS state
 function detectExternalCSSChanges() {
-    const currentCSSState = captureCSSState();
-    if (previousCSSState.length === 0) {
-        previousCSSState = currentCSSState;
-        return;
-    }
-
-    const changes = [];
-
-    currentCSSState.forEach((currentSheet, index) => {
-        const previousSheet = previousCSSState[index];
-        if (!previousSheet) return;
-
-        if (currentSheet.rules.length !== previousSheet.rules.length) {
-            changes.push({
-                type: 'rule-added-or-removed',
-                sheet: currentSheet.href || 'inline stylesheet'
-            });
-        } else {
-            currentSheet.rules.forEach((rule, i) => {
-                if (rule !== previousSheet.rules[i]) {
-                    changes.push({
-                        type: 'rule-modified',
-                        sheet: currentSheet.href || 'inline stylesheet',
-                        oldRule: previousSheet.rules[i],
-                        newRule: rule
-                    });
-                }
-            });
+    try {
+        const currentCSSState = captureCSSState();
+        if (previousCSSState.length === 0) {
+            previousCSSState = currentCSSState;
+            return;
         }
-    });
-    if (changes.length > 0) {
-        chrome.runtime.sendMessage({ type: 'STYLESHEET_CSS_CHANGES', changes });
-    }
 
-    previousCSSState = currentCSSState;
+        const changes = [];
+
+        currentCSSState.forEach((currentSheet, index) => {
+            const previousSheet = previousCSSState[index];
+            if (!previousSheet) return;
+
+            if (currentSheet.rules.length !== previousSheet.rules.length) {
+                changes.push({
+                    type: 'rule-added-or-removed',
+                    sheet: currentSheet.href || 'inline stylesheet'
+                });
+            } else {
+                currentSheet.rules.forEach((rule, i) => {
+                    if (rule !== previousSheet.rules[i]) {
+                        changes.push({
+                            type: 'rule-modified',
+                            sheet: currentSheet.href || 'inline stylesheet',
+                            oldRule: previousSheet.rules[i],
+                            newRule: rule
+                        });
+                    }
+                });
+            }
+        });
+        if (changes.length > 0) {
+            chrome.runtime.sendMessage({ type: 'STYLESHEET_CSS_CHANGES', changes });
+        }
+
+        previousCSSState = currentCSSState;
+    } catch (e) {
+        console.log(e)
+    }
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -81,7 +85,7 @@ const inlineObserver = new MutationObserver((mutations) => {
             if (mutation.target.className) {
                 selector += '.' + mutation.target.className;
             }
-            
+
             let newStyleString = selector + ' {' + newStyle + '}';
             changes.push({
                 type: 'rule-modified',
