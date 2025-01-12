@@ -4,8 +4,8 @@ document.addEventListener("DOMContentLoaded", () => {
 displayChanges();
     function displayChanges() {
         // 🟢 Fetch and Display CSS Changes
-        chrome.storage.local.get(["elementCssChanges", "inlineCSSChange"], (data) => {
-            const { elementCssChanges, inlineCSSChange } = data;
+        chrome.storage.local.get(["elementCssChanges", "styleSheetChanges"], (data) => {
+            const { elementCssChanges, styleSheetChanges } = data;
 
             if (elementCssChanges) {
                 elementCssChanges.forEach(change => {
@@ -15,9 +15,9 @@ displayChanges();
                 });
             }
 
-            if (inlineCSSChange) {
+            if (styleSheetChanges) {
                 const li = document.createElement("li");
-                li.textContent = `Inline CSS Change: ${inlineCSSChange}`;
+                li.textContent = `Inline CSS Change: ${styleSheetChanges}`;
                 cssList.appendChild(li);
             }
         });
@@ -25,19 +25,18 @@ displayChanges();
     // 🟢 Save Changes to File
     document.getElementById("save-changes").addEventListener("click", async () => {
         try {
-            const data = await chrome.storage.local.get(["elementCssChanges", "inlineCSSChange"]);
-            console.log('Data:', data);
+            const data = await chrome.storage.local.get(["elementCssChanges", "styleSheetChanges"]);
             const elementCssChanges = data.elementCssChanges || [];
-            const inlineCSSChange = data.inlineCSSChange ? [{
-                type: 'rule-modified',
-                sheet: 'inline stylesheet',
-                oldRule: '', // Assuming oldRule is not available for inline changes
-                newRule: data.inlineCSSChange
-            }] : [];
+            const styleSheetChanges = data.styleSheetChanges || [];
+            // ? [{
+            //     type: 'rule-modified',
+            //     sheet: 'inline stylesheet',
+            //     oldRule: '', // Assuming oldRule is not available for inline changes
+            //     newRule: data.styleSheetChanges
+            // }] : [];
+            console.log(styleSheetChanges);
 
-            const changes = [...elementCssChanges, ...inlineCSSChange];
-
-            if (elementCssChanges.length === 0 && inlineCSSChange.length === 0) {
+            if (elementCssChanges.length === 0 && styleSheetChanges.length === 0) {
                 alert("No changes to save.");
                 return;
             }
@@ -49,13 +48,16 @@ displayChanges();
                     accept: { "text/css": [".css"] }
                 }]
             });
-            console.log(elementCssChanges);
             const writable = await handle.createWritable();
-            const content1 = elementCssChanges.map(c => `/* ${c.type} in ${c.sheet}*/\n${c.newRule || ''}`).join("\n");
 
+            const content1 = elementCssChanges.map(c => `/* ${c.type} in ${c.sheet}*/\n${c.newRule || ''}`).join("\n");
+            await writable.write("/* Inline element CSS changes */\n");
             await writable.write(content1);
 
-            // const content2 = inlineCSSChange.map(c => `/* ${c.type} in ${c.sheet} */\n${c.newRule || ''}`).join("\n");
+            
+            const content2 = styleSheetChanges.map(c => `/* ${c.type} in ${c.sheet} */\n${c.newRule || ''}`).join("\n");
+            await writable.write("\n\n\n\n/* Exsisting stylesheets related css changes */\n");
+            await writable.write(content2);
 
             await writable.close();
 
