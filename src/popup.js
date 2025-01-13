@@ -68,7 +68,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         });
-        
+
+        chrome.runtime.onMessage.addListener((message) => {
+            if (message.type === 'CSS_CHANGES_UPDATED') {
+                chrome.storage.local.get(['elementCssChanges', 'styleSheetChanges'], (data) => {
+                    console.log('Updated CSS Changes:', data);
+                    displayChanges()
+                });
+            }
+        });
+
     });
 
     document.getElementById("clear-detect-btn").addEventListener('click', () => {
